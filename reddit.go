@@ -12,7 +12,7 @@ import (
 
 const (
 	baseAuthURL = "https://oauth.reddit.com"
-	baseURL     = "http://reddit.com"
+	baseURL     = "https://oauth.reddit.com"
 )
 
 // Client is the client for interacting with the Reddit API.

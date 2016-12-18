@@ -10,7 +10,7 @@ type Media struct {
 type Oembed struct {
 	Description     string `json:"description"`
 	HTML            string `json:"html"`
-	Height          string `json:"height"`
+	Height          int    `json:"height"`
 	ProviderName    string `json:"provider_name"`
 	ProviderURL     string `json:"provider_url"`
 	ThumbnailHeight int    `json:"thumbnail_height"`

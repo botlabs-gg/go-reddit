@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -20,8 +22,8 @@ type Link struct {
 	BannedBy            string        `json:"banned_by"`
 	Clicked             bool          `json:"clicked"`
 	ContestMode         bool          `json:"contest_mode"`
-	Created             int           `json:"created"`
-	CreatedUtc          int           `json:"created_utc"`
+	Created             float64       `json:"created"`
+	CreatedUtc          float64       `json:"created_utc"`
 	Distinguished       string        `json:"distinguished"`
 	Domain              string        `json:"domain"`
 	Downs               int           `json:"downs"`
@@ -96,17 +98,17 @@ func (c *Client) EditLinkText(linkID string, text string) error {
 
 // GetHotLinks retrieves a listing of hot links.
 func (c *Client) GetHotLinks(subreddit string) ([]*Link, error) {
-	return c.getLinks(subreddit, "hot")
+	return c.getLinks(subreddit, "hot", "", "")
 }
 
 // GetNewLinks retrieves a listing of new links.
-func (c *Client) GetNewLinks(subreddit string) ([]*Link, error) {
-	return c.getLinks(subreddit, "new")
+func (c *Client) GetNewLinks(subreddit, before, after string) ([]*Link, error) {
+	return c.getLinks(subreddit, "new", before, after)
 }
 
 // GetTopLinks retrieves a listing of top links.
 func (c *Client) GetTopLinks(subreddit string) ([]*Link, error) {
-	return c.getLinks(subreddit, "top")
+	return c.getLinks(subreddit, "top", "", "")
 }
 
 // HideLink removes the given link from the user's default view of subreddit listings. Requires the 'report' OAuth scope.
@@ -135,8 +137,14 @@ func (c *Client) HideLink(linkID string) error {
 	return nil
 }
 
-func (c *Client) getLinks(subreddit string, sort string) ([]*Link, error) {
-	url := fmt.Sprintf("%s/r/%s/%s.json", baseURL, subreddit, sort)
+func (c *Client) getLinks(subreddit string, sort, before, after string) ([]*Link, error) {
+	url := fmt.Sprintf("%s/r/%s/%s.json?limit=100", baseURL, subreddit, sort)
+	if before != "" {
+		url += "&before=" + before
+	} else if after != "" {
+		url += "&after=" + after
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -148,17 +156,33 @@ func (c *Client) getLinks(subreddit string, sort string) ([]*Link, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if resp.StatusCode != 200 {
+		return nil, NewError(resp)
+	}
+
 	defer resp.Body.Close()
 
-	var result linkListing
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	d, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	var result linkListing
+	err = json.Unmarshal(d, &result)
+	if err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			log.Println(string(d))
+			log.Printf("%#v", err)
+		} else {
+			return nil, err
+		}
+	}
+
 	var links []*Link
 	for _, link := range result.Data.Children {
-		links = append(links, &link.Data)
+		anotherCopy := link
+		links = append(links, &anotherCopy.Data)
 	}
 
 	return links, nil

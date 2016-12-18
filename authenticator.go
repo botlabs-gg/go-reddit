@@ -1,14 +1,17 @@
 package reddit
 
 import (
+	"context"
 	"errors"
 	"golang.org/x/oauth2"
+	"net/http"
 )
 
 // Authenticator provides functions for authenticating a user via OAuth2 and generating a client that can be used to access authorized API endpoints.
 type Authenticator struct {
 	config *oauth2.Config
 	state  string
+	ua     string
 }
 
 const (
@@ -54,7 +57,7 @@ const (
 )
 
 // NewAuthenticator generates a new authenticator with the supplied client, state, and requested scopes.
-func NewAuthenticator(clientID string, clientSecret string, redirectURL string, state string, scopes ...string) *Authenticator {
+func NewAuthenticator(ua string, clientID string, clientSecret string, redirectURL string, state string, scopes ...string) *Authenticator {
 	config := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -66,7 +69,7 @@ func NewAuthenticator(clientID string, clientSecret string, redirectURL string, 
 		RedirectURL: redirectURL,
 	}
 
-	return &Authenticator{config: config, state: state}
+	return &Authenticator{config: config, state: state, ua: ua}
 }
 
 // GetAuthenticationURL retrieves the URL used to direct the authenticating user to Reddit for permissions approval.
@@ -80,13 +83,53 @@ func (a *Authenticator) GetToken(state string, code string) (*oauth2.Token, erro
 		return nil, errors.New("Invalid state")
 	}
 
-	return a.config.Exchange(oauth2.NoContext, code)
+	return a.config.Exchange(context.WithValue(oauth2.NoContext, oauth2.HTTPClient, &http.Client{Transport: &uaSetterTransport{agent: a.ua}}), code)
 }
 
 // GetAuthClient generates a new authenticated client using the supplied access token.
 func (a *Authenticator) GetAuthClient(token *oauth2.Token, userAgent string) *Client {
 	return &Client{
-		http:      a.config.Client(oauth2.NoContext, token),
+		http:      a.httpClient(token),
 		userAgent: userAgent,
 	}
+}
+
+func (a *Authenticator) httpClient(token *oauth2.Token) *http.Client {
+	uaSetter := &uaSetterTransport{agent: a.ua}
+
+	tr := oauth2.Transport{
+		Source: a.config.TokenSource(context.WithValue(oauth2.NoContext, oauth2.HTTPClient, &http.Client{Transport: uaSetter}), token),
+		Base:   &http.Transport{},
+	}
+
+	return &http.Client{Transport: &tr}
+}
+
+// // agentForward forwards a user agent in all requests made by the Transport.
+// type agentForwarder struct {
+// 	http.Transport
+// 	agent string
+// }
+
+// // RoundTrip sets a predefined agent in the request and then forwards it to the
+// // default RountTrip implementation.
+// func (a *agentForwarder) RoundTrip(r *http.Request) (*http.Response, error) {
+// 	r.Header.Add("User-Agent", a.agent)
+// 	return a.Transport.RoundTrip(r)
+// }
+
+// func clientWithAgent(agent string) *http.Client {
+// 	return &http.Client{Transport: &agentForwarder{agent: agent}}
+// }
+
+type uaSetterTransport struct {
+	t     http.Transport
+	agent string
+}
+
+func (ua *uaSetterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// modify req here
+	req.Header.Add("User-Agent", ua.agent)
+	// fmt.Println("REDDIT: roundtripping", req.URL.String(), "UA:", ua.agent)
+	return ua.t.RoundTrip(req)
 }
