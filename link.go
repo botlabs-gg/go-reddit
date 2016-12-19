@@ -138,7 +138,7 @@ func (c *Client) HideLink(linkID string) error {
 }
 
 func (c *Client) getLinks(subreddit string, sort, before, after string) ([]*Link, error) {
-	url := fmt.Sprintf("%s/r/%s/%s.json?limit=100", baseURL, subreddit, sort)
+	url := fmt.Sprintf("%s/r/%s/%s.json?limit=100&raw_json=1", baseURL, subreddit, sort)
 	if before != "" {
 		url += "&before=" + before
 	} else if after != "" {
