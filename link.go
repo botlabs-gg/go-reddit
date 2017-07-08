@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // Link contains information about a link.
@@ -146,6 +147,54 @@ func (c *Client) getLinks(subreddit string, sort, before, after string) ([]*Link
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("User-Agent", c.userAgent)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, NewError(resp)
+	}
+
+	defer resp.Body.Close()
+
+	d, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result linkListing
+	err = json.Unmarshal(d, &result)
+	if err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			log.Println(string(d))
+			log.Printf("%#v", err)
+		} else {
+			return nil, err
+		}
+	}
+
+	var links []*Link
+	for _, link := range result.Data.Children {
+		anotherCopy := link
+		links = append(links, &anotherCopy.Data)
+	}
+
+	return links, nil
+}
+
+func (c *Client) LinksInfo(fullnames []string) ([]*Link, error) {
+	uri := baseURL + "/api/info.json?"
+
+	param := strings.Join(fullnames, ",")
+	uri += "id=" + param
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
