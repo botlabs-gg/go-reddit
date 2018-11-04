@@ -66,6 +66,7 @@ type Link struct {
 	Ups               int           `json:"ups"`
 	UserReports       []interface{} `json:"user_reports"`
 	Visited           bool          `json:"visited"`
+	IsRobotIndexable  bool          `json:"is_robot_indexable"`
 }
 
 const linkType = "t3"
