@@ -26,6 +26,7 @@ type Link struct {
 	Created             float64 `json:"created"`
 	CreatedUtc          float64 `json:"created_utc"`
 	CrosspostParent     string  `json:"crosspost_parent"`
+	CrosspostParentList []*Link `json:"crosspost_parent_list"`
 	Distinguished       string  `json:"distinguished"`
 	Domain              string  `json:"domain"`
 	Downs               int     `json:"downs"`
