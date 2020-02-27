@@ -2,9 +2,10 @@ package reddit
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDeleteLink(t *testing.T) {
@@ -57,7 +58,7 @@ func TestGetNewLinks(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	client := NoAuthClient
-	links, err := client.GetNewLinks("news")
+	links, err := client.GetNewLinks("news", "", "")
 	assert.NoError(t, err)
 	assert.Equal(t, len(links), 3)
 }
