@@ -25,6 +25,7 @@ type Link struct {
 	ContestMode         bool    `json:"contest_mode"`
 	Created             float64 `json:"created"`
 	CreatedUtc          float64 `json:"created_utc"`
+	CrosspostParent     string  `json:"crosspost_parent"`
 	Distinguished       string  `json:"distinguished"`
 	Domain              string  `json:"domain"`
 	Downs               int     `json:"downs"`
