@@ -49,6 +49,7 @@ type Link struct {
 	NumReports        int           `json:"num_reports"`
 	Over18            bool          `json:"over_18"`
 	Permalink         string        `json:"permalink"`
+	PostHint          string        `json:"post_hint"`
 	Quarantine        bool          `json:"quarantine"`
 	RemovalReason     interface{}   `json:"removal_reason"`
 	ReportReasons     []interface{} `json:"report_reasons"`
